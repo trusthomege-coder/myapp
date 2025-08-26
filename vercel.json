@@ -1,13 +1,5 @@
 {
   "rewrites": [
-    { "source": "/about", "destination": "/src/pages/About.tsx" },
-    { "source": "/buy", "destination": "/src/pages/Buy.tsx" },
-    { "source": "/catalog", "destination": "/src/pages/Catalog.tsx" },
-    { "source": "/contacts", "destination": "/src/pages/Contacts.tsx" },
-    { "source": "/favorites", "destination": "/src/pages/Favorites.tsx" },
-    { "source": "/", "destination": "/src/pages/Home.tsx" },
-    { "source": "/profile", "destination": "/src/pages/Profile.tsx" },
-    { "source": "/projects", "destination": "/src/pages/Projects.tsx" },
-    { "source": "/rent", "destination": "/src/pages/Rent.tsx" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
