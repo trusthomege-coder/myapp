@@ -22,21 +22,19 @@ const Rent: React.FC = () => {
         const { data, error } = await supabase
           .from('properties')
           .select('*')
-          .eq('category', 'rent'); // Убедитесь, что это значение верное
+          .eq('category', 'rent');
 
         if (error) {
           throw error;
         }
 
-        // --- ДОБАВЛЕННАЯ ЛОГИКА ---
         const processedData = (data || []).map(property => ({
           ...property,
           image_url: typeof property.image_url === 'string' && property.image_url.startsWith('[')
             ? JSON.parse(property.image_url)
             : property.image_url
         }));
-        // --- КОНЕЦ ДОБАВЛЕННОЙ ЛОГИКИ ---
-
+        
         setRentalProperties(processedData);
       } catch (err: any) {
         console.error('Ошибка при загрузке данных об аренде:', err.message);
@@ -76,7 +74,6 @@ const Rent: React.FC = () => {
   const getFilteredAndSortedProperties = () => {
     let filtered = rentalProperties;
     
-    // Filter by price range
     filtered = filtered.filter(prop => prop.price >= priceRange[0] && prop.price <= priceRange[1]);
     
     return sortProperties(filtered, sortBy);
@@ -91,7 +88,6 @@ const Rent: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -109,7 +105,6 @@ const Rent: React.FC = () => {
           </p>
         </motion.div>
 
-        {/* Rental Info Banner */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -128,7 +123,6 @@ const Rent: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Controls */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
           <div className="flex items-center space-x-2 mb-4">
             <Filter className="h-5 w-5 text-gray-600" />
@@ -136,7 +130,6 @@ const Rent: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Price Range Slider */}
             <div>
               <PriceRangeSlider
                 min={0}
@@ -149,7 +142,6 @@ const Rent: React.FC = () => {
               />
             </div>
             
-            {/* Sort and Results */}
             <div className="flex flex-col justify-end">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
@@ -181,7 +173,6 @@ const Rent: React.FC = () => {
           </div>
         </div>
 
-        {/* Условный рендеринг */}
         {loading ? (
           <div className="text-center py-10 text-gray-500">Загрузка объектов...</div>
         ) : error ? (
@@ -191,7 +182,6 @@ const Rent: React.FC = () => {
             К сожалению, объекты в аренду пока отсутствуют.
           </div>
         ) : (
-          /* Properties Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {sortedProperties.map((property, index) => (
               <motion.div
@@ -202,6 +192,10 @@ const Rent: React.FC = () => {
               >
                 <PropertyCard
                   {...property}
+                  image={Array.isArray(property.image_url) 
+                    ? `${property.image_url[0]}?v=${new Date().getTime()}`
+                    : `${property.image_url}?v=${new Date().getTime()}`
+                  }
                   isForRent={true}
                   onContactAgent={handleContactAgent}
                 />
@@ -210,7 +204,6 @@ const Rent: React.FC = () => {
           </div>
         )}
 
-        {/* Rental Services Banner */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
