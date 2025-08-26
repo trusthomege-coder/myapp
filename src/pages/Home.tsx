@@ -279,11 +279,14 @@ const Home: React.FC = () => {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
                 <PropertyCard
-                  {...property}
-                  image={Array.isArray(property.image_url) 
-                    ? `${property.image_url[0]}?v=${new Date().getTime()}`
-                    : `${property.image_url}?v=${new Date().getTime()}`
-                  }
+                  id={property.id}
+                  title={property.title}
+                  price={property.price}
+                  location={property.location}
+                  bedrooms={property.bedrooms}
+                  bathrooms={property.bathrooms}
+                  area={property.area}
+                  image={property.image_url} // Передаем весь массив URL
                   onContactAgent={handleContactAgent}
                 />
               </motion.div>
