@@ -1,8 +1,28 @@
+import { supabase } from '../lib/supabase';
+import { useEffect } from 'react';
 import React, { useState } from 'react';
 import { Building, MapPin, TrendingUp, Calendar } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import PropertyModal from '../components/PropertyModal';
+
+
+useEffect(() => {
+  const fetchProjects = async () => {
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('category', 'project'); // фильтруем по категории "project"
+    
+    if (error) {
+      console.error('Error fetching projects:', error);
+    } else {
+      setProjects(data || []);
+    }
+  };
+
+  fetchProjects();
+}, []);
 
 const Projects: React.FC = () => {
   const { t } = useLanguage();
