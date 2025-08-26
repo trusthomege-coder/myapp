@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase'; // Проверенный путь к клиенту
+import { supabase } from '../lib/supabase';
 import { Calendar, Clock, Filter } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
@@ -14,16 +14,15 @@ const Rent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. ЗАГРУЗКА ДАННЫХ ИЗ SUPABASE ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
   useEffect(() => {
     const fetchRentalProperties = async () => {
       setLoading(true);
       setError(null);
       try {
         const { data, error } = await supabase
-          .from('properties') // Имя вашей таблицы
+          .from('properties')
           .select('*')
-          .eq('category', 'rent'); // Фильтрация по категории
+          .eq('category', 'rent'); // Убедитесь, что это значение верное
 
         if (error) {
           throw error;
@@ -67,10 +66,10 @@ const Rent: React.FC = () => {
 
   const getFilteredAndSortedProperties = () => {
     let filtered = rentalProperties;
-
+    
     // Filter by price range
     filtered = filtered.filter(prop => prop.price >= priceRange[0] && prop.price <= priceRange[1]);
-
+    
     return sortProperties(filtered, sortBy);
   };
 
@@ -126,7 +125,7 @@ const Rent: React.FC = () => {
             <Filter className="h-5 w-5 text-gray-600" />
             <h3 className="text-lg font-semibold text-gray-900">Filter Rentals</h3>
           </div>
-
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Price Range Slider */}
             <div>
@@ -140,7 +139,7 @@ const Rent: React.FC = () => {
                 collapsed={true}
               />
             </div>
-
+            
             {/* Sort and Results */}
             <div className="flex flex-col justify-end">
               <div className="flex items-center justify-between mb-4">
@@ -162,7 +161,7 @@ const Rent: React.FC = () => {
                   </select>
                 </div>
               </div>
-
+              
               <div className="text-sm text-gray-600">
                 <span className="font-semibold">{sortedProperties.length}</span> rental properties available
                 <div className="text-xs text-gray-500 mt-1">
@@ -194,6 +193,7 @@ const Rent: React.FC = () => {
               >
                 <PropertyCard
                   {...property}
+                  image_url={`${property.image_url}?v=${new Date().getTime()}`}
                   isForRent={true}
                   onContactAgent={handleContactAgent}
                 />
