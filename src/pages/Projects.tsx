@@ -3,7 +3,7 @@ import { Building, MapPin, TrendingUp, Calendar } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import PropertyModal from '../components/PropertyModal';
-import { supabase } from '../lib/supabase'; // путь к клиенту Supabase
+import { supabase } from '../lib/supabase';
 
 const Projects: React.FC = () => {
   const { t } = useLanguage();
@@ -11,6 +11,8 @@ const Projects: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const statusColors = {
     planning: 'bg-yellow-100 text-yellow-800',
@@ -22,15 +24,32 @@ const Projects: React.FC = () => {
   // Подгружаем проекты из Supabase
   useEffect(() => {
     const fetchProjects = async () => {
-      const { data, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('category', 'project'); // только проекты
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('*')
+          .eq('category', 'project');
 
-      if (error) {
-        console.error('Ошибка при загрузке проектов:', error);
-      } else {
-        setProjects(data || []);
+        if (error) {
+          throw error;
+        }
+
+        // Логика для парсинга image_url
+        const processedData = (data || []).map(project => ({
+          ...project,
+          image_url: typeof project.image_url === 'string' && project.image_url.startsWith('[')
+            ? JSON.parse(project.image_url)
+            : project.image_url
+        }));
+
+        setProjects(processedData);
+      } catch (err: any) {
+        console.error('Ошибка при загрузке проектов:', err.message);
+        setError('Не удалось загрузить проекты. Пожалуйста, попробуйте позже.');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -42,18 +61,10 @@ const Projects: React.FC = () => {
     : projects.filter(project => project.status === filter);
 
   const handleViewProject = (project: any) => {
+    // Теперь image_url уже является массивом, поэтому передаем его напрямую
     const propertyData = {
-      id: project.id,
-      title: project.title,
-      description: project.description,
-      price: project.price,
-      location: project.location,
-      bedrooms: project.bedrooms,
-      bathrooms: project.bathrooms,
-      area: project.area,
-      image_url: [project.image_url],
-      category: project.category,
-      type: project.type,
+      ...project,
+      image_url: Array.isArray(project.image_url) ? project.image_url : [project.image_url],
     };
     setSelectedProject(propertyData);
     setIsModalOpen(true);
@@ -107,83 +118,98 @@ const Projects: React.FC = () => {
             </div>
           </div>
 
-          {/* Projects Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProjects.map((project, index) => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={project.image_url}
-                    alt={project.title}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[project.status]}`}>
-                      {project.status.replace('-', ' ')}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    {project.title}
-                  </h3>
-
-                  <div className="flex items-center text-gray-600 mb-2">
-                    <Building className="h-4 w-4 mr-2" />
-                    <span className="text-sm">{project.type}</span>
-                  </div>
-
-                  <div className="flex items-center text-gray-600 mb-2">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <span className="text-sm">{project.location}</span>
-                  </div>
-
-                  <div className="flex items-center text-gray-600 mb-4">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <span className="text-sm">Completion: {project.updated_at}</span>
-                  </div>
-
-                  <p className="text-gray-600 text-sm mb-6 line-clamp-2">
-                    {project.description}
-                  </p>
-
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <span className="text-2xl font-bold text-blue-700">
-                        {t('from')} ${project.price.toLocaleString()}
+          {/* Условный рендеринг */}
+          {loading ? (
+            <div className="text-center py-10 text-gray-500">Загрузка проектов...</div>
+          ) : error ? (
+            <div className="text-center py-10 text-red-500">{error}</div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              К сожалению, проекты пока отсутствуют.
+            </div>
+          ) : (
+            /* Projects Grid */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredProjects.map((project, index) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
+                >
+                  <div className="relative overflow-hidden">
+                    <img
+                      // Исправленная строка для отображения изображения
+                      src={Array.isArray(project.image_url) 
+                        ? `${project.image_url[0]}?v=${new Date().getTime()}`
+                        : `${project.image_url}?v=${new Date().getTime()}`
+                      }
+                      alt={project.title}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-4 left-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[project.status]}`}>
+                        {project.status.replace('-', ' ')}
                       </span>
                     </div>
-                    <div className="flex items-center text-green-600">
-                      <TrendingUp className="h-4 w-4 mr-1" />
-                      <span className="text-sm font-medium">ROI Potential</span>
-                    </div>
                   </div>
 
-                  <div className="flex space-x-3">
-                    <button 
-                      className="flex-1 bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors duration-200 text-sm font-medium"
-                      onClick={() => handleViewProject(project)}
-                    >
-                      {t('viewProject')}
-                    </button>
-                    <button 
-                      className="flex-1 border border-blue-700 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
-                      onClick={handleContactAgent}
-                    >
-                      {t('learnMore')}
-                    </button>
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      {project.title}
+                    </h3>
+
+                    <div className="flex items-center text-gray-600 mb-2">
+                      <Building className="h-4 w-4 mr-2" />
+                      <span className="text-sm">{project.type}</span>
+                    </div>
+
+                    <div className="flex items-center text-gray-600 mb-2">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      <span className="text-sm">{project.location}</span>
+                    </div>
+
+                    <div className="flex items-center text-gray-600 mb-4">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <span className="text-sm">Completion: {project.updated_at}</span>
+                    </div>
+
+                    <p className="text-gray-600 text-sm mb-6 line-clamp-2">
+                      {project.description}
+                    </p>
+
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <span className="text-2xl font-bold text-blue-700">
+                          {t('from')} ${project.price.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-green-600">
+                        <TrendingUp className="h-4 w-4 mr-1" />
+                        <span className="text-sm font-medium">ROI Potential</span>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-3">
+                      <button
+                        className="flex-1 bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors duration-200 text-sm font-medium"
+                        onClick={() => handleViewProject(project)}
+                      >
+                        {t('viewProject')}
+                      </button>
+                      <button
+                        className="flex-1 border border-blue-700 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
+                        onClick={handleContactAgent}
+                      >
+                        {t('learnMore')}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
