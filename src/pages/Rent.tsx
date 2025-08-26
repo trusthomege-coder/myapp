@@ -1,187 +1,157 @@
-import React, { useState } from 'react';
-import { Calendar, Clock, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building, MapPin, TrendingUp, Calendar } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
-import PropertyCard from '../components/PropertyCard';
-import PriceRangeSlider from '../components/PriceRangeSlider';
+import PropertyModal from '../components/PropertyModal';
+import { supabase } from '../lib/supabase';
 
 const Rent: React.FC = () => {
   const { t } = useLanguage();
-  const [sortBy, setSortBy] = useState('price-asc');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
-  const [rentalProperties, setRentalProperties] = useState<any[]>([]);
+  const [filter, setFilter] = useState('all');
+  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [properties, setProperties] = useState<any[]>([]);
 
+  const statusColors = {
+    planning: 'bg-yellow-100 text-yellow-800',
+    'pre-construction': 'bg-blue-100 text-blue-800',
+    'under-construction': 'bg-orange-100 text-orange-800',
+    completed: 'bg-green-100 text-green-800',
+  };
 
-  const sortOptions = [
-    { value: 'price-asc', label: 'Price: Low to High' },
-    { value: 'price-desc', label: 'Price: High to Low' },
-    { value: 'area-desc', label: 'Area: Largest First' },
-    { value: 'bedrooms-desc', label: 'Most Bedrooms' },
-  ];
+  useEffect(() => {
+    const fetchProperties = async () => {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('category', 'rent');
 
-  const sortProperties = (properties: typeof rentalProperties, sortBy: string) => {
-    return [...properties].sort((a, b) => {
-      switch (sortBy) {
-        case 'price-asc':
-          return a.price - b.price;
-        case 'price-desc':
-          return b.price - a.price;
-        case 'area-desc':
-          return b.area - a.area;
-        case 'bedrooms-desc':
-          return b.bedrooms - a.bedrooms;
-        default:
-          return 0;
+      if (error) {
+        console.error('Ошибка при загрузке объектов:', error);
+      } else {
+        setProperties(data || []);
       }
-    });
-  };
+    };
 
-  const getFilteredAndSortedProperties = () => {
-    let filtered = rentalProperties;
-    
-    // Filter by price range
-    filtered = filtered.filter(prop => prop.price >= priceRange[0] && prop.price <= priceRange[1]);
-    
-    return sortProperties(filtered, sortBy);
-  };
+    fetchProperties();
+  }, []);
 
-  const sortedProperties = getFilteredAndSortedProperties();
+  const filteredProperties = filter === 'all' 
+    ? properties 
+    : properties.filter(prop => prop.status === filter);
+
+  const handleViewProperty = (property: any) => {
+    setSelectedProperty(property);
+    setIsModalOpen(true);
+  };
 
   const handleContactAgent = () => {
     window.location.href = '/contacts';
   };
+
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-8"
-        >
-          <div className="flex items-center space-x-2 mb-4">
-            <Calendar className="h-8 w-8 text-blue-700" />
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-              {t('propertiesFor')} {t('forRent')}
+    <>
+      <div className="min-h-screen bg-gray-50 pt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              {t('rentProperties')}
             </h1>
-          </div>
-          <p className="text-lg text-gray-600">
-            Find your perfect rental property from our curated selection
-          </p>
-        </motion.div>
+          </motion.div>
 
-        {/* Rental Info Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8"
-        >
-          <div className="flex items-start space-x-3">
-            <Clock className="h-6 w-6 text-blue-600 mt-1" />
-            <div>
-              <h3 className="font-semibold text-blue-900 mb-2">Quick Rental Process</h3>
-              <p className="text-blue-700 text-sm">
-                All rental properties come with transparent lease terms, verified landlords, 
-                and our rental guarantee program. Move-in ready properties available for immediate occupancy.
-              </p>
-            </div>
+          <div className="mb-8 flex flex-wrap gap-4 justify-center">
+            {['all', 'planning', 'pre-construction', 'under-construction', 'completed'].map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-6 py-2 rounded-full font-medium transition-colors duration-200 ${
+                  filter === f ? 'bg-blue-700 text-white' : 'bg-white text-gray-700 hover:bg-blue-50'
+                }`}
+              >
+                {f.replace('-', ' ')}
+              </button>
+            ))}
           </div>
-        </motion.div>
 
-        {/* Controls */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex items-center space-x-2 mb-4">
-            <Filter className="h-5 w-5 text-gray-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Filter Rentals</h3>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Price Range Slider */}
-            <div>
-              <PriceRangeSlider
-                min={0}
-                max={5000}
-                value={priceRange}
-                onChange={setPriceRange}
-                step={100}
-                formatValue={(val) => `$${val.toLocaleString()}/mo`}
-                collapsed={true}
-              />
-            </div>
-            
-            {/* Sort and Results */}
-            <div className="flex flex-col justify-end">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <label htmlFor="sort" className="text-sm font-medium text-gray-700">
-                    Sort by:
-                  </label>
-                  <select
-                    id="sort"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredProperties.map((prop, index) => (
+              <motion.div
+                key={prop.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
+              >
+                <div className="relative overflow-hidden">
+                  <img
+                    src={prop.image_url}
+                    alt={prop.title}
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[prop.status]}`}>
+                      {prop.status.replace('-', ' ')}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="text-sm text-gray-600">
-                <span className="font-semibold">{sortedProperties.length}</span> rental properties available
-                <div className="text-xs text-gray-500 mt-1">
-                  Budget: ${priceRange[0].toLocaleString()}/mo - ${priceRange[1].toLocaleString()}/mo
+
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{prop.title}</h3>
+                  <div className="flex items-center text-gray-600 mb-2">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    <span className="text-sm">{prop.location}</span>
+                  </div>
+                  <p className="text-gray-600 text-sm mb-6 line-clamp-2">{prop.description}</p>
+
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <span className="text-2xl font-bold text-blue-700">
+                        ${prop.price.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center text-green-600">
+                      <TrendingUp className="h-4 w-4 mr-1" />
+                      <span className="text-sm font-medium">ROI Potential</span>
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <button 
+                      className="flex-1 bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors duration-200 text-sm font-medium"
+                      onClick={() => handleViewProperty(prop)}
+                    >
+                      {t('viewProperty')}
+                    </button>
+                    <button 
+                      className="flex-1 border border-blue-700 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
+                      onClick={handleContactAgent}
+                    >
+                      {t('learnMore')}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            ))}
           </div>
         </div>
-
-        {/* Properties Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {sortedProperties.map((property, index) => (
-            <motion.div
-              key={property.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.05 }}
-            >
-              <PropertyCard {...property} isForRent={true} />
-              <PropertyCard 
-                {...property} 
-                isForRent={true} 
-                onContactAgent={handleContactAgent}
-              />
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Rental Services Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mt-16 bg-gradient-to-r from-blue-700 to-blue-800 rounded-2xl p-8 text-white text-center"
-        >
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            Need Help Finding the Perfect Rental?
-          </h2>
-          <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-            Our rental specialists can help you find properties that match your exact requirements, 
-            budget, and timeline. Free consultation and personalized recommendations.
-          </p>
-          <button className="bg-white text-blue-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-            Contact Rental Specialist
-          </button>
-        </motion.div>
       </div>
-    </div>
+
+      {selectedProperty && (
+        <PropertyModal
+          property={selectedProperty}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedProperty(null);
+          }}
+        />
+      )}
+    </>
   );
 };
 
