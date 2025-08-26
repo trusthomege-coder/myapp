@@ -47,11 +47,9 @@ const Projects: React.FC = () => {
   const handleContactAgent = () => {
     window.location.href = '/contacts';
   };
-
 useEffect(() => {
   console.log('Projects component loaded');
 }, []);
-
 
   return (
     <>
