@@ -280,10 +280,9 @@ const Home: React.FC = () => {
               >
                 <PropertyCard
                   {...property}
-                  image_url={
-                    Array.isArray(property.image_url) && property.image_url.length > 0
-                      ? property.image_url[0]
-                      : '/path/to/placeholder-image.jpg'
+                  image={Array.isArray(property.image_url) 
+                    ? `${property.image_url[0]}?v=${new Date().getTime()}`
+                    : `${property.image_url}?v=${new Date().getTime()}`
                   }
                   onContactAgent={handleContactAgent}
                 />
