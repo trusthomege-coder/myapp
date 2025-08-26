@@ -1,6 +1,5 @@
-//rent//
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase'; // Проверенный путь к клиенту
 import { Calendar, Clock, Filter } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
@@ -12,7 +11,35 @@ const Rent: React.FC = () => {
   const [sortBy, setSortBy] = useState('price-asc');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
   const [rentalProperties, setRentalProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // 1. ЗАГРУЗКА ДАННЫХ ИЗ SUPABASE ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
+  useEffect(() => {
+    const fetchRentalProperties = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from('properties') // Имя вашей таблицы
+          .select('*')
+          .eq('category', 'аренда'); // Фильтрация по категории
+
+        if (error) {
+          throw error;
+        }
+
+        setRentalProperties(data || []);
+      } catch (err: any) {
+        console.error('Ошибка при загрузке данных об аренде:', err.message);
+        setError('Не удалось загрузить объекты. Пожалуйста, попробуйте позже.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRentalProperties();
+  }, []);
 
   const sortOptions = [
     { value: 'price-asc', label: 'Price: Low to High' },
@@ -40,10 +67,10 @@ const Rent: React.FC = () => {
 
   const getFilteredAndSortedProperties = () => {
     let filtered = rentalProperties;
-    
+
     // Filter by price range
     filtered = filtered.filter(prop => prop.price >= priceRange[0] && prop.price <= priceRange[1]);
-    
+
     return sortProperties(filtered, sortBy);
   };
 
@@ -52,6 +79,7 @@ const Rent: React.FC = () => {
   const handleContactAgent = () => {
     window.location.href = '/contacts';
   };
+
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -85,7 +113,7 @@ const Rent: React.FC = () => {
             <div>
               <h3 className="font-semibold text-blue-900 mb-2">Quick Rental Process</h3>
               <p className="text-blue-700 text-sm">
-                All rental properties come with transparent lease terms, verified landlords, 
+                All rental properties come with transparent lease terms, verified landlords,
                 and our rental guarantee program. Move-in ready properties available for immediate occupancy.
               </p>
             </div>
@@ -98,7 +126,7 @@ const Rent: React.FC = () => {
             <Filter className="h-5 w-5 text-gray-600" />
             <h3 className="text-lg font-semibold text-gray-900">Filter Rentals</h3>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Price Range Slider */}
             <div>
@@ -112,7 +140,7 @@ const Rent: React.FC = () => {
                 collapsed={true}
               />
             </div>
-            
+
             {/* Sort and Results */}
             <div className="flex flex-col justify-end">
               <div className="flex items-center justify-between mb-4">
@@ -134,7 +162,7 @@ const Rent: React.FC = () => {
                   </select>
                 </div>
               </div>
-              
+
               <div className="text-sm text-gray-600">
                 <span className="font-semibold">{sortedProperties.length}</span> rental properties available
                 <div className="text-xs text-gray-500 mt-1">
@@ -145,24 +173,34 @@ const Rent: React.FC = () => {
           </div>
         </div>
 
-        {/* Properties Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {sortedProperties.map((property, index) => (
-            <motion.div
-              key={property.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.05 }}
-            >
-              <PropertyCard {...property} isForRent={true} />
-              <PropertyCard 
-                {...property} 
-                isForRent={true} 
-                onContactAgent={handleContactAgent}
-              />
-            </motion.div>
-          ))}
-        </div>
+        {/* Условный рендеринг */}
+        {loading ? (
+          <div className="text-center py-10 text-gray-500">Загрузка объектов...</div>
+        ) : error ? (
+          <div className="text-center py-10 text-red-500">{error}</div>
+        ) : sortedProperties.length === 0 ? (
+          <div className="text-center py-10 text-gray-500">
+            К сожалению, объекты в аренду пока отсутствуют.
+          </div>
+        ) : (
+          /* Properties Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {sortedProperties.map((property, index) => (
+              <motion.div
+                key={property.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.05 }}
+              >
+                <PropertyCard
+                  {...property}
+                  isForRent={true}
+                  onContactAgent={handleContactAgent}
+                />
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         {/* Rental Services Banner */}
         <motion.div
@@ -175,7 +213,7 @@ const Rent: React.FC = () => {
             Need Help Finding the Perfect Rental?
           </h2>
           <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-            Our rental specialists can help you find properties that match your exact requirements, 
+            Our rental specialists can help you find properties that match your exact requirements,
             budget, and timeline. Free consultation and personalized recommendations.
           </p>
           <button className="bg-white text-blue-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-50 transition-colors duration-200">
