@@ -1,16 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, DollarSign, Filter } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import PropertyCard from '../components/PropertyCard';
 import PriceRangeSlider from '../components/PriceRangeSlider';
+import { supabase } from '../lib/supabase'; // Добавлен импорт
+
+interface Property {
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  location: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  image_url: string | string[];
+  category: 'rent' | 'sale' | 'project';
+  type: string;
+}
 
 const Buy: React.FC = () => {
   const { t } = useLanguage();
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
   const [propertyType, setPropertyType] = useState('all');
-  const [saleProperties, setSaleProperties] = useState<any[]>([]);
+  const [saleProperties, setSaleProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true); // Добавлен state для загрузки
+  const [error, setError] = useState<string | null>(null); // Добавлен state для ошибок
 
+  // 1. Добавлен useEffect для загрузки данных при первом рендере
+  useEffect(() => {
+    const fetchSaleProperties = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('*')
+          .eq('category', 'sale'); // Фильтруем по категории 'sale'
+
+        if (error) {
+          throw error;
+        }
+
+        // 2. Добавлена логика для парсинга image_url
+        const processedData = (data || []).map(property => ({
+          ...property,
+          image_url: typeof property.image_url === 'string' && property.image_url.startsWith('[')
+            ? JSON.parse(property.image_url)
+            : property.image_url
+        }));
+
+        setSaleProperties(processedData);
+      } catch (err: any) {
+        console.error('Ошибка при загрузке объектов на продажу:', err.message);
+        setError('Не удалось загрузить объекты. Пожалуйста, попробуйте позже.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSaleProperties();
+  }, []);
 
   const propertyTypes = [
     { value: 'all', label: 'All Types' },
@@ -22,21 +72,12 @@ const Buy: React.FC = () => {
   const filterProperties = () => {
     let filtered = saleProperties;
 
-    // Filter by price range
     filtered = filtered.filter(prop => prop.price >= priceRange[0] && prop.price <= priceRange[1]);
 
-    // Filter by property type (simplified for demo)
     if (propertyType !== 'all') {
-      // In a real app, properties would have a type field
-      filtered = filtered.filter(prop => {
-        const title = prop.title.toLowerCase();
-        if (propertyType === 'apartment') return title.includes('apartment') || title.includes('studio') || title.includes('penthouse');
-        if (propertyType === 'house') return title.includes('house');
-        if (propertyType === 'villa') return title.includes('villa');
-        return true;
-      });
+      filtered = filtered.filter(prop => prop.type === propertyType);
     }
-
+    
     return filtered;
   };
 
@@ -45,6 +86,7 @@ const Buy: React.FC = () => {
   const handleContactAgent = () => {
     window.location.href = '/contacts';
   };
+
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -78,7 +120,7 @@ const Buy: React.FC = () => {
             <div>
               <h3 className="font-semibold text-green-900 mb-2">Flexible Financing Options</h3>
               <p className="text-green-700 text-sm">
-                We partner with leading banks to offer competitive mortgage rates starting from 3.5% APR. 
+                We partner with leading banks to offer competitive mortgage rates starting from 3.5% APR.
                 Get pre-approved in 24 hours and access exclusive buyer programs.
               </p>
             </div>
@@ -135,46 +177,37 @@ const Buy: React.FC = () => {
           </div>
         </div>
 
-        {/* Properties Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProperties.map((property, index) => (
-            <motion.div
-              key={property.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.05 }}
-            >
-              <PropertyCard {...property} />
-              <PropertyCard 
-                {...property} 
-                onContactAgent={handleContactAgent}
-              />
-            </motion.div>
-          ))}
-        </div>
-
-        {/* No results message */}
-        {filteredProperties.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
-            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <Home className="h-12 w-12 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Properties Found</h3>
-            <p className="text-gray-600 mb-6">Try adjusting your filters to see more results.</p>
-            <button
-              onClick={() => {
-                setPriceRange([0, 1000000]);
-                setPropertyType('all');
-              }}
-              className="bg-blue-700 text-white py-2 px-6 rounded-lg hover:bg-blue-800 transition-colors duration-200"
-            >
-              Clear Filters
-            </button>
-          </motion.div>
+        {/* Условный рендеринг */}
+        {loading ? (
+          <div className="text-center py-10 text-gray-500">Загрузка объектов...</div>
+        ) : error ? (
+          <div className="text-center py-10 text-red-500">{error}</div>
+        ) : filteredProperties.length === 0 ? (
+          <div className="text-center py-10 text-gray-500">
+            К сожалению, объекты на продажу пока отсутствуют.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredProperties.map((property, index) => (
+              <motion.div
+                key={property.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.05 }}
+              >
+                {/* 3. Корректная передача пропса 'image' */}
+                <PropertyCard
+                  {...property}
+                  image={Array.isArray(property.image_url) 
+                    ? `${property.image_url[0]}?v=${new Date().getTime()}`
+                    : `${property.image_url}?v=${new Date().getTime()}`
+                  }
+                  isForSale={true}
+                  onContactAgent={handleContactAgent}
+                />
+              </motion.div>
+            ))}
+          </div>
         )}
 
         {/* Buyer Services Banner */}
@@ -188,7 +221,7 @@ const Buy: React.FC = () => {
             Ready to Make an Offer?
           </h2>
           <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-            Our experienced buyer agents will help you negotiate the best deal, 
+            Our experienced buyer agents will help you negotiate the best deal,
             arrange inspections, and guide you through the entire purchase process.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
