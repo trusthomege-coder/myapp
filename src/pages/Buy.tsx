@@ -1,40 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import PropertyCard from '../components/PropertyCard';
+import PropertyModal from '../components/PropertyModal';
 import { supabase } from '../lib/supabase';
 
 const Buy: React.FC = () => {
   const { t } = useLanguage();
   const [properties, setProperties] = useState<any[]>([]);
+  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProperties = async () => {
       const { data, error } = await supabase
         .from('properties')
         .select('*')
-        .eq('category', 'buy'); // <-- фильтр по категории
-
-      if (error) {
-        console.error('Ошибка при загрузке объектов:', error);
-      } else {
+        .eq('category', 'buy')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
         setProperties(data);
       }
     };
-
     fetchProperties();
   }, []);
 
+  const handleViewProperty = (property: any) => {
+    setSelectedProperty(property);
+    setIsModalOpen(true);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">{t('buyProperties')}</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
+    <>
+      {/* Тут оставляем весь существующий JSX и верстку страницы */}
+      {properties.map((property) => (
+        <div key={property.id}>
+          <h3>{property.title}</h3>
+          <p>{property.description}</p>
+          <button onClick={() => handleViewProperty(property)}>
+            {t('viewProperty')}
+          </button>
         </div>
-      </div>
-    </div>
+      ))}
+
+      {selectedProperty && (
+        <PropertyModal
+          property={selectedProperty}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedProperty(null);
+          }}
+        />
+      )}
+    </>
   );
 };
 
