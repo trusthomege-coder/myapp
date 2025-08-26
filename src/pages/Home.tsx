@@ -274,6 +274,11 @@ const Home: React.FC = () => {
               >
                 <PropertyCard
                   {...property}
+                  image_url={
+                    Array.isArray(property.image_url) && property.image_url.length > 0
+                      ? property.image_url[0]
+                      : '/path/to/placeholder-image.jpg' // Укажите здесь путь к вашему изображению-заглушке
+                  }
                   onContactAgent={handleContactAgent}
                 />
               </motion.div>
