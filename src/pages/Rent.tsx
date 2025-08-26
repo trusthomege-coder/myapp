@@ -28,7 +28,16 @@ const Rent: React.FC = () => {
           throw error;
         }
 
-        setRentalProperties(data || []);
+        // --- ДОБАВЛЕННАЯ ЛОГИКА ---
+        const processedData = (data || []).map(property => ({
+          ...property,
+          image_url: typeof property.image_url === 'string' && property.image_url.startsWith('[')
+            ? JSON.parse(property.image_url)
+            : property.image_url
+        }));
+        // --- КОНЕЦ ДОБАВЛЕННОЙ ЛОГИКИ ---
+
+        setRentalProperties(processedData);
       } catch (err: any) {
         console.error('Ошибка при загрузке данных об аренде:', err.message);
         setError('Не удалось загрузить объекты. Пожалуйста, попробуйте позже.');
@@ -193,7 +202,6 @@ const Rent: React.FC = () => {
               >
                 <PropertyCard
                   {...property}
-                  image_url={`${property.image_url}?v=${new Date().getTime()}`}
                   isForRent={true}
                   onContactAgent={handleContactAgent}
                 />
