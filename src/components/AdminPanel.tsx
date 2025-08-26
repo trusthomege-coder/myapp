@@ -19,6 +19,8 @@ interface Property {
   category: 'rent' | 'sale' | 'project';
   type: string;
   status?: string;
+  // НОВАЯ СТРОКА: добавляем поле для "топ-объявления"
+  is_featured: boolean; 
 }
 
 interface QuizQuestion {
@@ -55,6 +57,8 @@ const AdminPanel: React.FC = () => {
     category: 'sale',
     type: 'apartment',
     status: 'planning',
+    // НОВАЯ СТРОКА: устанавливаем значение по умолчанию
+    is_featured: false, 
   });
 
   const [newQuestion, setNewQuestion] = useState<Omit<QuizQuestion, 'id'>>({
@@ -81,7 +85,6 @@ const AdminPanel: React.FC = () => {
 
       if (error) throw error;
       
-      // Parse image_url JSON strings back to arrays
       const processedData = (data || []).map(property => ({
         ...property,
         image_url: typeof property.image_url === 'string' && property.image_url.startsWith('[')
@@ -148,6 +151,8 @@ const AdminPanel: React.FC = () => {
         category: 'sale',
         type: 'apartment',
         status: 'planning',
+        // НОВАЯ СТРОКА: сбрасываем состояние
+        is_featured: false, 
       });
       setShowAddProperty(false);
       fetchProperties();
@@ -538,6 +543,18 @@ const AdminPanel: React.FC = () => {
                         </div>
                       )}
                     </div>
+                    {/* НОВЫЙ БЛОК: чекбокс для топ-объявления */}
+                    <div className="mb-4">
+                      <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={newProperty.is_featured}
+                          onChange={(e) => setNewProperty({ ...newProperty, is_featured: e.target.checked })}
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span>Топ-объявление</span>
+                      </label>
+                    </div>
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
                       <textarea
@@ -696,6 +713,18 @@ const AdminPanel: React.FC = () => {
                                 </select>
                               </div>
                             )}
+                            {/* НОВЫЙ БЛОК: чекбокс для редактирования */}
+                            <div className="mb-4">
+                              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={editingProperty.is_featured}
+                                  onChange={(e) => setEditingProperty({ ...editingProperty, is_featured: e.target.checked })}
+                                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <span>Топ-объявление</span>
+                              </label>
+                            </div>
                             <div>
                               <textarea
                                 value={editingProperty.description}
@@ -732,307 +761,3 @@ const AdminPanel: React.FC = () => {
                           </div>
                         ) : (
                           <div className="flex justify-between items-center">
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{property.title}</h3>
-                              <p className="text-gray-600">{property.location} - ${property.price.toLocaleString()}</p>
-                              <p className="text-sm text-gray-500">
-                                {property.category === 'rent' ? 'Аренда' : property.category === 'sale' ? 'Продажа' : 'Проект'} • 
-                                {property.type} • {property.bedrooms}сп/{property.bathrooms}в • {property.area} кв.м
-                                {property.category === 'project' && property.status && (
-                                  <> • <span className="capitalize">{property.status.replace('-', ' ')}</span></>
-                                )}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {Array.isArray(property.image_url) 
-                                  ? `${property.image_url.length} изображений`
-                                  : '1 изображение'
-                                }
-                              </p>
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => setEditingProperty(property)}
-                                className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 flex items-center space-x-1"
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span>Изменить</span>
-                              </button>
-                              <button
-                                onClick={() => handleDeleteProperty(property.id)}
-                                className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center space-x-1"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span>Удалить</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'quiz' && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Управление квизом</h2>
-                  <button
-                    onClick={() => setShowAddQuestion(true)}
-                    className="bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Добавить вопрос</span>
-                  </button>
-                </div>
-
-                {/* Add Question Form */}
-                {showAddQuestion && (
-                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                    <h3 className="text-lg font-semibold mb-4">Добавить новый вопрос</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Вопрос (Русский)</label>
-                        <input
-                          type="text"
-                          placeholder="Какой тип недвижимости вас интересует?"
-                          value={newQuestion.question}
-                          onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Вопрос (English)</label>
-                        <input
-                          type="text"
-                          placeholder="What type of property are you interested in?"
-                          value={newQuestion.question_en}
-                          onChange={(e) => setNewQuestion({ ...newQuestion, question_en: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Варианты ответов (Русский)</label>
-                          {newQuestion.options.map((option, index) => (
-                            <div key={index} className="flex items-center space-x-2 mb-2">
-                              <input
-                                type="text"
-                                placeholder={`Вариант ${index + 1}`}
-                                value={option}
-                                onChange={(e) => updateOption(index, e.target.value, false)}
-                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                              />
-                              {newQuestion.options.length > 2 && (
-                                <button
-                                  onClick={() => removeOption(index, false)}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          <button
-                            onClick={() => addOption(false)}
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                          >
-                            + Добавить вариант
-                          </button>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Варианты ответов (English)</label>
-                          {newQuestion.options_en.map((option, index) => (
-                            <div key={index} className="flex items-center space-x-2 mb-2">
-                              <input
-                                type="text"
-                                placeholder={`Option ${index + 1}`}
-                                value={option}
-                                onChange={(e) => updateOption(index, e.target.value, true)}
-                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                              />
-                              {newQuestion.options_en.length > 2 && (
-                                <button
-                                  onClick={() => removeOption(index, true)}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          <button
-                            onClick={() => addOption(true)}
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                          >
-                            + Add option
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2 mt-4">
-                      <button
-                        onClick={handleAddQuestion}
-                        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center space-x-1"
-                      >
-                        <Save className="h-4 w-4" />
-                        <span>Сохранить</span>
-                      </button>
-                      <button
-                        onClick={() => setShowAddQuestion(false)}
-                        className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 flex items-center space-x-1"
-                      >
-                        <X className="h-4 w-4" />
-                        <span>Отмена</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Quiz Questions List */}
-                <div className="space-y-4">
-                  {quizQuestions.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      Нет вопросов в квизе
-                    </div>
-                  ) : (
-                    quizQuestions.map((question) => (
-                      <div key={question.id} className="border border-gray-200 rounded-lg p-4">
-                        {editingQuestion?.id === question.id ? (
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Вопрос (Русский)</label>
-                              <input
-                                type="text"
-                                value={editingQuestion.question}
-                                onChange={(e) => setEditingQuestion({ ...editingQuestion, question: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Вопрос (English)</label>
-                              <input
-                                type="text"
-                                value={editingQuestion.question_en}
-                                onChange={(e) => setEditingQuestion({ ...editingQuestion, question_en: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                              />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Варианты ответов (Русский)</label>
-                                {editingQuestion.options.map((option, index) => (
-                                  <div key={index} className="flex items-center space-x-2 mb-2">
-                                    <input
-                                      type="text"
-                                      value={option}
-                                      onChange={(e) => updateOption(index, e.target.value, false)}
-                                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                    />
-                                    {editingQuestion.options.length > 2 && (
-                                      <button
-                                        onClick={() => removeOption(index, false)}
-                                        className="text-red-600 hover:text-red-800"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                  </div>
-                                ))}
-                                <button
-                                  onClick={() => addOption(false)}
-                                  className="text-blue-600 hover:text-blue-800 text-sm"
-                                >
-                                  + Добавить вариант
-                                </button>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Варианты ответов (English)</label>
-                                {editingQuestion.options_en.map((option, index) => (
-                                  <div key={index} className="flex items-center space-x-2 mb-2">
-                                    <input
-                                      type="text"
-                                      value={option}
-                                      onChange={(e) => updateOption(index, e.target.value, true)}
-                                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                    />
-                                    {editingQuestion.options_en.length > 2 && (
-                                      <button
-                                        onClick={() => removeOption(index, true)}
-                                        className="text-red-600 hover:text-red-800"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                  </div>
-                                ))}
-                                <button
-                                  onClick={() => addOption(true)}
-                                  className="text-blue-600 hover:text-blue-800 text-sm"
-                                >
-                                  + Add option
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={handleUpdateQuestion}
-                                className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center space-x-1"
-                              >
-                                <Save className="h-4 w-4" />
-                                <span>Сохранить</span>
-                              </button>
-                              <button
-                                onClick={() => setEditingQuestion(null)}
-                                className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 flex items-center space-x-1"
-                              >
-                                <X className="h-4 w-4" />
-                                <span>Отмена</span>
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-900 mb-2">{question.question}</h3>
-                              <p className="text-gray-600 text-sm mb-2">{question.question_en}</p>
-                              <div className="text-sm text-gray-500 mb-1">
-                                <strong>RU:</strong> {question.options.join(', ')}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                <strong>EN:</strong> {question.options_en.join(', ')}
-                              </div>
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => setEditingQuestion(question)}
-                                className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 flex items-center space-x-1"
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span>Изменить</span>
-                              </button>
-                              <button
-                                onClick={() => handleDeleteQuestion(question.id)}
-                                className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center space-x-1"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span>Удалить</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default AdminPanel;
