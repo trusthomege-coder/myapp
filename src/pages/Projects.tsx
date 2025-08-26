@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building, MapPin, TrendingUp, Calendar } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
