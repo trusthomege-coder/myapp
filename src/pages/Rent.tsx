@@ -23,7 +23,7 @@ const Rent: React.FC = () => {
         const { data, error } = await supabase
           .from('properties') // Имя вашей таблицы
           .select('*')
-          .eq('category', 'аренда'); // Фильтрация по категории
+          .eq('category', 'rent'); // Фильтрация по категории
 
         if (error) {
           throw error;
