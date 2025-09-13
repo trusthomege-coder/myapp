@@ -206,16 +206,10 @@ const Projects: React.FC = () => {
                       <span className="text-sm">{project.type}</span>
                     </div>
 
-                    <div className="flex items-center text-gray-600 mb-4">
+                    <div className="flex items-center text-gray-600 mb-2">
                       <MapPin className="h-4 w-4 mr-2" />
                       <span className="text-sm">{project.location}</span>
                     </div>
-
-                    {/* Удален блок с Completion */}
-                    {/* <div className="flex items-center text-gray-600 mb-4">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <span className="text-sm">Completion: {project.updated_at}</span>
-                    </div> */}
 
                     <p className="text-gray-600 text-sm mb-6 line-clamp-2">
                       {project.description}
@@ -230,7 +224,7 @@ const Projects: React.FC = () => {
                       <div className="flex items-center text-green-600">
                         <TrendingUp className="h-4 w-4 mr-1" />
                         <span className="text-sm font-medium">ROI Potential</span>
-                      </div>
+                    </div>
                     </div>
 
                     <div className="flex space-x-3">
@@ -251,7 +245,7 @@ const Projects: React.FC = () => {
               </motion.div>
               );
             })}
-          </div>
+            </div>
           )}
         </div>
       </div>
