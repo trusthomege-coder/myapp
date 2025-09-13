@@ -21,7 +21,6 @@ const Projects: React.FC = () => {
     completed: 'bg-green-100 text-green-800',
   };
 
-  // Подгружаем проекты из Supabase
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
@@ -36,7 +35,6 @@ const Projects: React.FC = () => {
           throw error;
         }
 
-        // Логика для парсинга image_url
         const processedData = (data || []).map(project => ({
           ...project,
           image_url: typeof project.image_url === 'string' && project.image_url.startsWith('[')
@@ -52,7 +50,6 @@ const Projects: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchProjects();
   }, []);
 
@@ -61,7 +58,6 @@ const Projects: React.FC = () => {
     : projects.filter(project => project.status === filter);
 
   const handleViewProject = (project: any) => {
-    // Теперь image_url уже является массивом, поэтому передаем его напрямую
     const propertyData = {
       ...project,
       image_url: Array.isArray(project.image_url) ? project.image_url : [project.image_url],
@@ -140,8 +136,7 @@ const Projects: React.FC = () => {
                 >
                   <div className="relative overflow-hidden">
                     <img
-                      // Исправленная строка для отображения изображения
-                      src={Array.isArray(project.image_url) 
+                      src={Array.isArray(project.image_url)
                         ? `${project.image_url[0]}?v=${new Date().getTime()}`
                         : `${project.image_url}?v=${new Date().getTime()}`
                       }
