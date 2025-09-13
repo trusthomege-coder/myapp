@@ -211,6 +211,12 @@ const Projects: React.FC = () => {
                       <span className="text-sm">{project.location}</span>
                     </div>
 
+                    {/* Удален блок с Completion */}
+                    {/* <div className="flex items-center text-gray-600 mb-4">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <span className="text-sm">Completion: {project.updated_at}</span>
+                    </div> */}
+
                     <p className="text-gray-600 text-sm mb-6 line-clamp-2">
                       {project.description}
                     </p>
@@ -220,26 +226,26 @@ const Projects: React.FC = () => {
                         <span className="text-2xl font-bold text-blue-700">
                           {t('from')} ${project.price.toLocaleString()}
                         </span>
-                      </div>
+                    </div>
                       <div className="flex items-center text-green-600">
                         <TrendingUp className="h-4 w-4 mr-1" />
                         <span className="text-sm font-medium">ROI Potential</span>
                     </div>
-                    </div>
+                  </div>
 
-                    <div className="flex space-x-3">
-                      <button
-                        className="flex-1 bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors duration-200 text-sm font-medium"
-                        onClick={() => handleViewProject(project)}
-                      >
-                        {t('viewProject')}
-                      </button>
-                      <button
-                        className="flex-1 border border-blue-700 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
-                        onClick={handleContactAgent}
-                      >
-                        {t('learnMore')}
-                      </button>
+                  <div className="flex space-x-3">
+                    <button
+                      className="flex-1 bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors duration-200 text-sm font-medium"
+                      onClick={() => handleViewProject(project)}
+                    >
+                      {t('viewProject')}
+                    </button>
+                    <button
+                      className="flex-1 border border-blue-700 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
+                      onClick={handleContactAgent}
+                    >
+                      {t('learnMore')}
+                    </button>
                   </div>
                 </div>
               </motion.div>
