@@ -195,14 +195,9 @@ const Buy: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.05 }}
               >
-                {/* 3. Корректная передача пропса 'image' */}
                 <PropertyCard
                   {...property}
-                  image={Array.isArray(property.image_url) 
-                    ? `${property.image_url[0]}?v=${new Date().getTime()}`
-                    : `${property.image_url}?v=${new Date().getTime()}`
-                  }
-                  isForSale={true}
+                  image={property.image_url} // Передаем весь массив
                   onContactAgent={handleContactAgent}
                 />
               </motion.div>
