@@ -208,14 +208,8 @@ const Projects: React.FC = () => {
 
                     <div className="flex items-center text-gray-600 mb-2">
                       <MapPin className="h-4 w-4 mr-2" />
-                      <span className="text-sm">{project.location}</span>
+                      <span className="text-sm whitespace-nowrap overflow-hidden text-ellipsis">{project.location}</span>
                     </div>
-
-                    {/* Удален блок с Completion */}
-                    {/* <div className="flex items-center text-gray-600 mb-4">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <span className="text-sm">Completion: {project.updated_at}</span>
-                    </div> */}
 
                     <p className="text-gray-600 text-sm mb-6 line-clamp-2">
                       {project.description}
