@@ -13,9 +13,7 @@ const Projects: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Состояние для отслеживания текущего изображения для каждого проекта
   const [imageIndices, setImageIndices] = useState<{ [key: number]: number }>({});
-
 
   const statusColors = {
     planning: 'bg-yellow-100 text-yellow-800',
@@ -44,7 +42,6 @@ const Projects: React.FC = () => {
             ? JSON.parse(project.image_url)
             : project.image_url
         }));
-        // Инициализируем состояние индексов изображений
         const initialImageIndices = processedData.reduce((acc, project) => {
           acc[project.id] = 0;
           return acc;
@@ -78,7 +75,6 @@ const Projects: React.FC = () => {
     window.location.href = '/contacts';
   };
 
-  // Новые функции для управления слайдером
   const handlePrev = (e: React.MouseEvent, projectId: number) => {
     e.stopPropagation();
     setImageIndices(prev => {
@@ -210,15 +206,16 @@ const Projects: React.FC = () => {
                       <span className="text-sm">{project.type}</span>
                     </div>
 
-                    <div className="flex items-center text-gray-600 mb-2">
+                    <div className="flex items-center text-gray-600 mb-4">
                       <MapPin className="h-4 w-4 mr-2" />
                       <span className="text-sm">{project.location}</span>
                     </div>
 
-                    <div className="flex items-center text-gray-600 mb-4">
+                    {/* Удален блок с Completion */}
+                    {/* <div className="flex items-center text-gray-600 mb-4">
                       <Calendar className="h-4 w-4 mr-2" />
                       <span className="text-sm">Completion: {project.updated_at}</span>
-                    </div>
+                    </div> */}
 
                     <p className="text-gray-600 text-sm mb-6 line-clamp-2">
                       {project.description}
@@ -229,7 +226,7 @@ const Projects: React.FC = () => {
                         <span className="text-2xl font-bold text-blue-700">
                           {t('from')} ${project.price.toLocaleString()}
                         </span>
-                    </div>
+                      </div>
                       <div className="flex items-center text-green-600">
                         <TrendingUp className="h-4 w-4 mr-1" />
                         <span className="text-sm font-medium">ROI Potential</span>
@@ -254,7 +251,7 @@ const Projects: React.FC = () => {
               </motion.div>
               );
             })}
-            </div>
+          </div>
           )}
         </div>
       </div>
