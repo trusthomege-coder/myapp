@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Building, MapPin, TrendingUp, Calendar } from 'lucide-react';
+import { Building, MapPin, TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import PropertyModal from '../components/PropertyModal';
 import { supabase } from '../lib/supabase';
-import ProjectCardSlider from '../components/ProjectCardSlider'; // Импортируем новый компонент
+import PropertyCard from '../components/PropertyCard'; // Импортируем PropertyCard
 
 const Projects: React.FC = () => {
   const { t } = useLanguage();
@@ -128,12 +128,12 @@ const Projects: React.FC = () => {
             /* Projects Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredProjects.map((project, index) => (
-                <ProjectCardSlider
+                <PropertyCard
                   key={project.id}
-                  project={project}
-                  handleViewProject={handleViewProject}
-                  handleContactAgent={handleContactAgent}
-                  index={index}
+                  {...project}
+                  image={project.image_url}
+                  isForRent={false} // Проекты не сдаются в аренду
+                  onContactAgent={handleContactAgent}
                 />
               ))}
             </div>
