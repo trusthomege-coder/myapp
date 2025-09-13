@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Building, MapPin, TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building, MapPin, TrendingUp, Calendar } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import PropertyModal from '../components/PropertyModal';
 import { supabase } from '../lib/supabase';
+import ProjectCardSlider from '../components/ProjectCardSlider'; // Импортируем новый компонент
 
 const Projects: React.FC = () => {
   const { t } = useLanguage();
@@ -126,117 +127,15 @@ const Projects: React.FC = () => {
           ) : (
             /* Projects Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredProjects.map((project, index) => {
-                // Логика слайдера для каждого проекта
-                const [currentImageIndex, setCurrentImageIndex] = useState(0);
-                const images = Array.isArray(project.image_url) ? project.image_url : [project.image_url];
-                const hasMultipleImages = images.length > 1;
-
-                const handlePrev = (e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  setCurrentImageIndex((prevIndex) =>
-                    prevIndex === 0 ? images.length - 1 : prevIndex - 1
-                  );
-                };
-
-                const handleNext = (e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  setCurrentImageIndex((prevIndex) =>
-                    prevIndex === images.length - 1 ? 0 : prevIndex + 1
-                  );
-                };
-
-                return (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
-                  >
-                    <div className="relative overflow-hidden">
-                      <img
-                        src={images[currentImageIndex] ? `${images[currentImageIndex]}?v=${new Date().getTime()}` : '/placeholder.jpg'}
-                        alt={project.title}
-                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      {hasMultipleImages && (
-                        <>
-                          <button
-                            onClick={handlePrev}
-                            className="absolute left-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-75 transition-colors"
-                          >
-                            <ChevronLeft size={20} />
-                          </button>
-                          <button
-                            onClick={handleNext}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-75 transition-colors"
-                          >
-                            <ChevronRight size={20} />
-                          </button>
-                        </>
-                      )}
-                      <div className="absolute top-4 left-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[project.status]}`}>
-                          {project.status.replace('-', ' ')}
-                        </span>
-                      </div>
-                  </div>
-
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {project.title}
-                    </h3>
-
-                    <div className="flex items-center text-gray-600 mb-2">
-                      <Building className="h-4 w-4 mr-2" />
-                      <span className="text-sm">{project.type}</span>
-                    </div>
-
-                    <div className="flex items-center text-gray-600 mb-2">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      <span className="text-sm">{project.location}</span>
-                    </div>
-
-                    <div className="flex items-center text-gray-600 mb-4">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <span className="text-sm">Completion: {project.updated_at}</span>
-                    </div>
-
-                    <p className="text-gray-600 text-sm mb-6 line-clamp-2">
-                      {project.description}
-                    </p>
-
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <span className="text-2xl font-bold text-blue-700">
-                          {t('from')} ${project.price.toLocaleString()}
-                        </span>
-                    </div>
-                      <div className="flex items-center text-green-600">
-                        <TrendingUp className="h-4 w-4 mr-1" />
-                        <span className="text-sm font-medium">ROI Potential</span>
-                      </div>
-                    </div>
-
-                    <div className="flex space-x-3">
-                      <button
-                        className="flex-1 bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors duration-200 text-sm font-medium"
-                        onClick={() => handleViewProject(project)}
-                      >
-                        {t('viewProject')}
-                      </button>
-                      <button
-                        className="flex-1 border border-blue-700 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
-                        onClick={handleContactAgent}
-                      >
-                        {t('learnMore')}
-                      </button>
-                  </div>
-                </div>
-              </motion.div>
-              );
-            })}
+              {filteredProjects.map((project, index) => (
+                <ProjectCardSlider
+                  key={project.id}
+                  project={project}
+                  handleViewProject={handleViewProject}
+                  handleContactAgent={handleContactAgent}
+                  index={index}
+                />
+              ))}
             </div>
           )}
         </div>
