@@ -20,6 +20,23 @@ interface RequestFormData {
   email: string;
   phone: string;
   preferences: string;
+  priceRange: number[];
+  bookingDate: string;
+  bookingTime: string;
+  language: string;
+  guests: number;
+  accompaniment: boolean;
+  amenities: boolean;
+  amenitiesDetails: string;
+  withChildren: boolean;
+  withPets: boolean;
+}
+
+interface PropertyData {
+  id: number;
+  title: string;
+  price: number;
+  location: string;
 }
 
 // Telegram Bot Configuration
@@ -28,10 +45,10 @@ const TELEGRAM_GROUP_CHAT_ID = process.env.TELEGRAM_GROUP_CHAT_ID;
 const TELEGRAM_PERSONAL_CHAT_ID = process.env.TELEGRAM_PERSONAL_CHAT_ID;
 
 // EmailJS Configuration
-const EMAILJS_SERVICE_ID = 'service_lrco09n';
-const EMAILJS_ADMIN_TEMPLATE_ID = 'template_kom3k4b';
-const EMAILJS_USER_TEMPLATE_ID = 'template_hauqg1e';
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+const EMAILJS_SERVICE_ID = process.env.VITE_EMAILJS_SERVICE_ID;
+const EMAILJS_ADMIN_TEMPLATE_ID = process.env.VITE_EMAILJS_ADMIN_TEMPLATE_ID;
+const EMAILJS_USER_TEMPLATE_ID = process.env.VITE_EMAILJS_USER_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY = process.env.VITE_EMAILJS_PUBLIC_KEY;
 
 // Send notification to Telegram
 export const sendTelegramNotification = async (message: string, chatId: string): Promise<boolean> => {
@@ -66,7 +83,7 @@ export const sendTelegramNotification = async (message: string, chatId: string):
 };
 
 // Send email notification using EmailJS
-export const sendEmailNotification = async (templateParams: any, templateId: string = EMAILJS_ADMIN_TEMPLATE_ID): Promise<boolean> => {
+export const sendEmailNotification = async (templateParams: any, templateId: string): Promise<boolean> => {
   if (!EMAILJS_SERVICE_ID || !templateId || !EMAILJS_PUBLIC_KEY) {
     console.warn('EmailJS credentials not configured');
     return false;
@@ -76,10 +93,10 @@ export const sendEmailNotification = async (templateParams: any, templateId: str
     const emailjs = await import('@emailjs/browser');
     
     const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
+      EMAILJS_SERVICE_ID!,
       templateId,
       templateParams,
-      EMAILJS_PUBLIC_KEY
+      EMAILJS_PUBLIC_KEY!
     );
 
     return response.status === 200;
@@ -89,7 +106,7 @@ export const sendEmailNotification = async (templateParams: any, templateId: str
   }
 };
 
-// Send booking notification
+// Handle booking notification
 export const sendBookingNotification = async (bookingData: any): Promise<{ success: boolean; error?: string }> => {
   try {
     const telegramMessage = `
@@ -126,7 +143,7 @@ ${bookingData.apartments.map((apt: any) => `
       apartments: bookingData.apartments,
       submission_time: new Date().toLocaleString('ru-RU'),
     };
-    const adminEmail = await sendEmailNotification(adminEmailParams, EMAILJS_ADMIN_TEMPLATE_ID);
+    const adminEmail = await sendEmailNotification(adminEmailParams, EMAILJS_ADMIN_TEMPLATE_ID!);
 
     const userEmailParams = {
       to_email: bookingData.user_email,
@@ -134,7 +151,7 @@ ${bookingData.apartments.map((apt: any) => `
       apartments: bookingData.apartments,
       submission_time: new Date().toLocaleString('ru-RU'),
     };
-    const userEmail = await sendEmailNotification(userEmailParams, EMAILJS_USER_TEMPLATE_ID);
+    const userEmail = await sendEmailNotification(userEmailParams, EMAILJS_USER_TEMPLATE_ID!);
 
     return { success: true };
   } catch (error) {
@@ -189,7 +206,7 @@ export const handleContactFormSubmission = async (data: ContactFormData): Promis
       message: data.message,
       submission_time: new Date().toLocaleString('ru-RU'),
     };
-    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID);
+    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID!);
 
     if (!telegramSent && !emailSent) {
       return { success: false, error: 'Не удалось отправить уведомления' };
@@ -243,7 +260,7 @@ export const handleHeroFormSubmission = async (data: HeroFormData): Promise<{ su
       message: 'Пользователь оставил контакты на главной странице',
       submission_time: new Date().toLocaleString('ru-RU'),
     };
-    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID);
+    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID!);
 
     return { success: true };
   } catch (error) {
@@ -313,6 +330,50 @@ export const handleRequestFormSubmission = async (data: RequestFormData): Promis
     return { success: true };
   } catch (error) {
     console.error('Error handling request form:', error);
+    return { success: false, error: 'Произошла ошибка при отправке' };
+  }
+};
+
+// НОВАЯ ФУНКЦИЯ: для отправки заявки при нажатии на кнопку "Связаться с агентом"
+export const handleContactAgentSubmission = async (propertyData: PropertyData): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const telegramMessage = `
+📞 <b>Заявка от клиента с сайта</b>
+Запрос на контакт с агентом по объекту.
+
+🏡 <b>Объект:</b> ${propertyData.title}
+🗺️ <b>Адрес:</b> ${propertyData.location}
+💰 <b>Цена:</b> $${propertyData.price.toLocaleString()}
+🔗 <b>Ссылка:</b> ${window.location.href}
+
+⏰ <b>Время:</b> ${new Date().toLocaleString('ru-RU')}
+    `.trim();
+
+    const telegramSent = await sendTelegramNotification(telegramMessage, TELEGRAM_GROUP_CHAT_ID!);
+    
+    // Опционально: сохранение в базу данных
+    const { error: dbError } = await supabase
+      .from('agent_contact_submissions')
+      .insert([
+        {
+          property_id: propertyData.id,
+          property_title: propertyData.title,
+          property_location: propertyData.location,
+          created_at: new Date().toISOString(),
+        }
+      ]);
+    
+    if (dbError) {
+      console.error('Database error:', dbError);
+    }
+
+    if (!telegramSent) {
+      return { success: false, error: 'Не удалось отправить уведомление' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error handling contact agent submission:', error);
     return { success: false, error: 'Произошла ошибка при отправке' };
   }
 };
