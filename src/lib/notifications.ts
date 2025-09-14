@@ -23,9 +23,10 @@ interface RequestFormData {
 }
 
 // Telegram Bot Configuration
-const TELEGRAM_BOT_TOKEN = '8312302689:AAFHnF-B9PA-xpSQzhbIZV8WyjSFq1ZJlh8';
-const TELEGRAM_GROUP_CHAT_ID = '-1003037754496';
-const TELEGRAM_PERSONAL_CHAT_ID = '8473230196';
+// ИСправлено: теперь мы получаем переменные из окружения
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_GROUP_CHAT_ID = process.env.TELEGRAM_GROUP_CHAT_ID;
+const TELEGRAM_PERSONAL_CHAT_ID = process.env.TELEGRAM_PERSONAL_CHAT_ID;
 
 // EmailJS Configuration
 const EMAILJS_SERVICE_ID = 'service_lrco09n';
@@ -34,9 +35,10 @@ const EMAILJS_USER_TEMPLATE_ID = 'template_hauqg1e';
 const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
 // Send notification to Telegram
-export const sendTelegramNotification = async (message: string, chatId: string = TELEGRAM_GROUP_CHAT_ID): Promise<boolean> => {
+export const sendTelegramNotification = async (message: string, chatId: string = TELEGRAM_GROUP_CHAT_ID!): Promise<boolean> => {
+  // Исправлено: добавлена проверка на наличие переменных
   if (!TELEGRAM_BOT_TOKEN || !chatId) {
-    console.warn('Telegram credentials not configured');
+    console.error('Telegram credentials not configured');
     return false;
   }
 
@@ -52,6 +54,11 @@ export const sendTelegramNotification = async (message: string, chatId: string =
         parse_mode: 'HTML',
       }),
     });
+
+    if (!response.ok) {
+      console.error('Telegram API responded with an error:', response.statusText);
+      return false;
+    }
 
     return response.ok;
   } catch (error) {
@@ -160,6 +167,50 @@ ${data.message}
   `.trim();
 };
 
+// Handle contact form submission
+export const handleContactFormSubmission = async (data: ContactFormData): Promise<{ success: boolean; error?: string }> => {
+  try {
+    // Save to database
+    const { error: dbError } = await supabase
+      .from('contact_submissions')
+      .insert([{
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        subject: data.subject,
+        message: data.message,
+        created_at: new Date().toISOString(),
+      }]);
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+    }
+
+    // Send notifications
+    const telegramMessage = formatContactFormForTelegram(data);
+    const telegramSent = await sendTelegramNotification(telegramMessage, TELEGRAM_GROUP_CHAT_ID); // Исправлено
+    const emailParams = {
+      to_email: 'your-email@example.com', // Замените на ваш email
+      from_name: data.name,
+      from_email: data.email,
+      phone: data.phone,
+      subject: data.subject || 'Новая заявка',
+      message: data.message,
+      submission_time: new Date().toLocaleString('ru-RU'),
+    };
+    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID); // Исправлено
+
+    if (!telegramSent && !emailSent) {
+      return { success: false, error: 'Не удалось отправить уведомления' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error handling contact form:', error);
+    return { success: false, error: 'Произошла ошибка при отправке' };
+  }
+};
+
 // Format hero form for Telegram
 const formatHeroFormForTelegram = (data: HeroFormData): string => {
   return `
@@ -171,6 +222,45 @@ const formatHeroFormForTelegram = (data: HeroFormData): string => {
 
 ⏰ <b>Время:</b> ${new Date().toLocaleString('ru-RU')}
   `.trim();
+};
+
+// Handle hero form submission
+export const handleHeroFormSubmission = async (data: HeroFormData): Promise<{ success: boolean; error?: string }> => {
+  try {
+    // Save to database
+    const { error: dbError } = await supabase
+      .from('hero_submissions')
+      .insert([{
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        created_at: new Date().toISOString(),
+      }]);
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+    }
+
+    // Send notifications
+    const telegramMessage = formatHeroFormForTelegram(data);
+    const telegramSent = await sendTelegramNotification(telegramMessage, TELEGRAM_GROUP_CHAT_ID); // Исправлено
+
+    const emailParams = {
+      to_email: 'your-email@example.com', // Замените на ваш email
+      from_name: data.name,
+      from_email: data.email,
+      phone: data.phone,
+      subject: 'Заявка с главной страницы',
+      message: 'Пользователь оставил контакты на главной странице',
+      submission_time: new Date().toLocaleString('ru-RU'),
+    };
+    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID); // Исправлено
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error handling hero form:', error);
+    return { success: false, error: 'Произошла ошибка при отправке' };
+  }
 };
 
 // Format request form for Telegram
@@ -200,90 +290,6 @@ ${data.preferences}
   `.trim();
 };
 
-// Handle contact form submission
-export const handleContactFormSubmission = async (data: ContactFormData): Promise<{ success: boolean; error?: string }> => {
-  try {
-    // Save to database
-    const { error: dbError } = await supabase
-      .from('contact_submissions')
-      .insert([{
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        subject: data.subject,
-        message: data.message,
-        created_at: new Date().toISOString(),
-      }]);
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-    }
-
-    // Send notifications
-    const telegramMessage = formatContactFormForTelegram(data);
-    const telegramSent = await sendTelegramNotification(telegramMessage);
-
-    const emailParams = {
-      to_email: 'your-email@example.com', // Замените на ваш email
-      from_name: data.name,
-      from_email: data.email,
-      phone: data.phone,
-      subject: data.subject || 'Новая заявка',
-      message: data.message,
-      submission_time: new Date().toLocaleString('ru-RU'),
-    };
-    const emailSent = await sendEmailNotification(emailParams);
-
-    if (!telegramSent && !emailSent) {
-      return { success: false, error: 'Не удалось отправить уведомления' };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error handling contact form:', error);
-    return { success: false, error: 'Произошла ошибка при отправке' };
-  }
-};
-
-// Handle hero form submission
-export const handleHeroFormSubmission = async (data: HeroFormData): Promise<{ success: boolean; error?: string }> => {
-  try {
-    // Save to database
-    const { error: dbError } = await supabase
-      .from('hero_submissions')
-      .insert([{
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        created_at: new Date().toISOString(),
-      }]);
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-    }
-
-    // Send notifications
-    const telegramMessage = formatHeroFormForTelegram(data);
-    const telegramSent = await sendTelegramNotification(telegramMessage);
-
-    const emailParams = {
-      to_email: 'your-email@example.com', // Замените на ваш email
-      from_name: data.name,
-      from_email: data.email,
-      phone: data.phone,
-      subject: 'Заявка с главной страницы',
-      message: 'Пользователь оставил контакты на главной странице',
-      submission_time: new Date().toLocaleString('ru-RU'),
-    };
-    const emailSent = await sendEmailNotification(emailParams);
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error handling hero form:', error);
-    return { success: false, error: 'Произошла ошибка при отправке' };
-  }
-};
-
 // Handle request form submission
 export const handleRequestFormSubmission = async (data: RequestFormData): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -304,7 +310,7 @@ export const handleRequestFormSubmission = async (data: RequestFormData): Promis
 
     // Send notifications
     const telegramMessage = formatRequestFormForTelegram(data);
-    const telegramSent = await sendTelegramNotification(telegramMessage);
+    const telegramSent = await sendTelegramNotification(telegramMessage, TELEGRAM_GROUP_CHAT_ID); // Исправлено
 
     const emailParams = {
       to_email: 'your-email@example.com', // Замените на ваш email
@@ -315,7 +321,7 @@ export const handleRequestFormSubmission = async (data: RequestFormData): Promis
       message: data.preferences,
       submission_time: new Date().toLocaleString('ru-RU'),
     };
-    const emailSent = await sendEmailNotification(emailParams);
+    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID); // Исправлено
 
     return { success: true };
   } catch (error) {
