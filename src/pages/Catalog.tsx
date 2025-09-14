@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { motion } from 'framer-motion';
 import PropertyCard from '../components/PropertyCard';
 import PriceRangeSlider from '../components/PriceRangeSlider';
+import { handleContactAgentSubmission } from '../lib/notifications';
 
 interface Property {
   id: number;
@@ -124,6 +125,10 @@ const Catalog: React.FC = () => {
   };
 
   const filteredProperties = filterProperties();
+  const handleContactAgent = (property: Property) => {
+    handleContactAgentSubmission(property);
+    alert('Ваша заявка отправлена!');
+  };
 
   if (loading) {
     return (
@@ -297,8 +302,8 @@ const Catalog: React.FC = () => {
           </div>
         ) : (
           <div className={`grid gap-8 ${
-            viewMode === 'grid' 
-              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
+            viewMode === 'grid'
+              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
               : 'grid-cols-1'
           }`}>
             {filteredProperties.map((property, index) => (
@@ -318,6 +323,7 @@ const Catalog: React.FC = () => {
                   area={property.area}
                   image={property.image_url}
                   isForRent={property.category === 'rent'}
+                  onContactAgent={() => handleContactAgent(property)}
                 />
               </motion.div>
             ))}
