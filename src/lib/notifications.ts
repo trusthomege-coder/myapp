@@ -36,7 +36,6 @@ const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
 // Send notification to Telegram
 export const sendTelegramNotification = async (message: string, chatId: string): Promise<boolean> => {
-  // ИСПРАВЛЕНО: более строгая проверка
   if (!TELEGRAM_BOT_TOKEN || !chatId) {
     console.error('Telegram credentials are not configured or chat ID is missing');
     return false;
@@ -92,7 +91,8 @@ export const sendEmailNotification = async (templateParams: any, templateId: str
 };
 
 // Send booking notification
-export const const sendBookingNotification = async (bookingData: any): Promise<{ success: boolean; error?: string }> => {
+// ИСПРАВЛЕНО: убран лишний const
+export const sendBookingNotification = async (bookingData: any): Promise<{ success: boolean; error?: string }> => {
   try {
     const telegramMessage = `
 🏠 <b>Новая заявка на просмотр недвижимости</b>
@@ -117,8 +117,8 @@ ${bookingData.apartments.map((apt: any) => `
 ⏰ <b>Время заявки:</b> ${new Date().toLocaleString('ru-RU')}
     `.trim();
 
-    const telegramGroup = await sendTelegramNotification(telegramMessage, TELEGRAM_GROUP_CHAT_ID);
-    const telegramPersonal = await sendTelegramNotification(telegramMessage, TELEGRAM_PERSONAL_CHAT_ID);
+    const telegramGroup = await sendTelegramNotification(telegramMessage, TELEGRAM_GROUP_CHAT_ID!);
+    const telegramPersonal = await sendTelegramNotification(telegramMessage, TELEGRAM_PERSONAL_CHAT_ID!);
 
     const adminEmailParams = {
       to_email: 'trusthome.ge@gmail.com',
