@@ -23,10 +23,9 @@ interface RequestFormData {
 }
 
 // Telegram Bot Configuration
-// ИСПРАВЛЕНО: Используем import.meta.env с префиксом VITE_ для переменных
-const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-const TELEGRAM_GROUP_CHAT_ID = import.meta.env.VITE_TELEGRAM_GROUP_CHAT_ID;
-const TELEGRAM_PERSONAL_CHAT_ID = import.meta.env.VITE_TELEGRAM_PERSONAL_CHAT_ID;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_GROUP_CHAT_ID = process.env.TELEGRAM_GROUP_CHAT_ID;
+const TELEGRAM_PERSONAL_CHAT_ID = process.env.TELEGRAM_PERSONAL_CHAT_ID;
 
 // EmailJS Configuration
 const EMAILJS_SERVICE_ID = 'service_lrco09n';
@@ -91,7 +90,6 @@ export const sendEmailNotification = async (templateParams: any, templateId: str
 };
 
 // Send booking notification
-// ИСПРАВЛЕНО: убран лишний const
 export const sendBookingNotification = async (bookingData: any): Promise<{ success: boolean; error?: string }> => {
   try {
     const telegramMessage = `
