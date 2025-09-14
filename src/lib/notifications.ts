@@ -40,15 +40,14 @@ interface PropertyData {
 }
 
 // Telegram Bot Configuration
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_GROUP_CHAT_ID = process.env.TELEGRAM_GROUP_CHAT_ID;
-const TELEGRAM_PERSONAL_CHAT_ID = process.env.TELEGRAM_PERSONAL_CHAT_ID;
+const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+const TELEGRAM_GROUP_CHAT_ID = import.meta.env.VITE_TELEGRAM_GROUP_CHAT_ID;
 
 // EmailJS Configuration
-const EMAILJS_SERVICE_ID = process.env.VITE_EMAILJS_SERVICE_ID;
-const EMAILJS_ADMIN_TEMPLATE_ID = process.env.VITE_EMAILJS_ADMIN_TEMPLATE_ID;
-const EMAILJS_USER_TEMPLATE_ID = process.env.VITE_EMAILJS_USER_TEMPLATE_ID;
-const EMAILJS_PUBLIC_KEY = process.env.VITE_EMAILJS_PUBLIC_KEY;
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const EMAILJS_ADMIN_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_ADMIN_TEMPLATE_ID;
+const EMAILJS_USER_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_USER_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
 // Send notification to Telegram
 export const sendTelegramNotification = async (message: string, chatId: string): Promise<boolean> => {
@@ -133,7 +132,7 @@ ${bookingData.apartments.map((apt: any) => `
     `.trim();
 
     const telegramGroup = await sendTelegramNotification(telegramMessage, TELEGRAM_GROUP_CHAT_ID!);
-    const telegramPersonal = await sendTelegramNotification(telegramMessage, TELEGRAM_PERSONAL_CHAT_ID!);
+    const telegramPersonal = await sendTelegramNotification(telegramMessage, process.env.VITE_TELEGRAM_PERSONAL_CHAT_ID!);
 
     const adminEmailParams = {
       to_email: 'trusthome.ge@gmail.com',
@@ -222,7 +221,7 @@ export const handleContactFormSubmission = async (data: ContactFormData): Promis
 // Format hero form for Telegram
 const formatHeroFormForTelegram = (data: HeroFormData): string => {
   return `
-🌟 <b>Заявка с главной страницы</b>
+🌟 <b>Заявка с главной страницы (форма Hero)</b>
 
 👤 <b>Имя:</b> ${data.name}
 📧 <b>Email:</b> ${data.email}
@@ -272,7 +271,7 @@ export const handleHeroFormSubmission = async (data: HeroFormData): Promise<{ su
 // Format request form for Telegram
 const formatRequestFormForTelegram = (data: RequestFormData): string => {
   return `
-📝 <b>Заявка на подбор недвижимости</b>
+📝 <b>Заявка на подбор недвижимости (с главной страницы)</b>
 
 👤 <b>Имя:</b> ${data.name}
 📧 <b>Email:</b> ${data.email}
@@ -306,6 +305,16 @@ export const handleRequestFormSubmission = async (data: RequestFormData): Promis
         email: data.email,
         phone: data.phone,
         preferences: data.preferences,
+        price_range: data.priceRange,
+        booking_date: data.bookingDate,
+        booking_time: data.bookingTime,
+        language: data.language,
+        guests: data.guests,
+        accompaniment: data.accompaniment,
+        amenities: data.amenities,
+        amenities_details: data.amenitiesDetails,
+        with_children: data.withChildren,
+        with_pets: data.withPets,
         created_at: new Date().toISOString(),
       }]);
 
@@ -325,7 +334,7 @@ export const handleRequestFormSubmission = async (data: RequestFormData): Promis
       message: data.preferences,
       submission_time: new Date().toLocaleString('ru-RU'),
     };
-    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID);
+    const emailSent = await sendEmailNotification(emailParams, EMAILJS_ADMIN_TEMPLATE_ID!);
 
     return { success: true };
   } catch (error) {
