@@ -4,7 +4,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import PropertyCard from '../components/PropertyCard';
 import PriceRangeSlider from '../components/PriceRangeSlider';
-import { supabase } from '../lib/supabase'; // Добавлен импорт
+import { supabase } from '../lib/supabase';
+import { handleContactAgentSubmission } from '../lib/notifications';
 
 interface Property {
   id: number;
@@ -25,10 +26,9 @@ const Buy: React.FC = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
   const [propertyType, setPropertyType] = useState('all');
   const [saleProperties, setSaleProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true); // Добавлен state для загрузки
-  const [error, setError] = useState<string | null>(null); // Добавлен state для ошибок
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // 1. Добавлен useEffect для загрузки данных при первом рендере
   useEffect(() => {
     const fetchSaleProperties = async () => {
       setLoading(true);
@@ -37,13 +37,12 @@ const Buy: React.FC = () => {
         const { data, error } = await supabase
           .from('properties')
           .select('*')
-          .eq('category', 'sale'); // Фильтруем по категории 'sale'
+          .eq('category', 'sale');
 
         if (error) {
           throw error;
         }
 
-        // 2. Добавлена логика для парсинга image_url
         const processedData = (data || []).map(property => ({
           ...property,
           image_url: typeof property.image_url === 'string' && property.image_url.startsWith('[')
@@ -82,9 +81,9 @@ const Buy: React.FC = () => {
   };
 
   const filteredProperties = filterProperties();
-
-  const handleContactAgent = () => {
-    window.location.href = '/contacts';
+  const handleContactAgent = (property: Property) => {
+    handleContactAgentSubmission(property);
+    alert('Ваша заявка отправлена!');
   };
 
   return (
@@ -197,8 +196,8 @@ const Buy: React.FC = () => {
               >
                 <PropertyCard
                   {...property}
-                  image={property.image_url} // Передаем весь массив
-                  onContactAgent={handleContactAgent}
+                  image={property.image_url}
+                  onContactAgent={() => handleContactAgent(property)}
                 />
               </motion.div>
             ))}
