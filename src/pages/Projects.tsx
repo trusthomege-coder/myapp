@@ -68,11 +68,6 @@ const Projects: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleContactAgent = (property: any) => {
-    handleContactAgentSubmission(property);
-    alert('Ваша заявка отправлена!');
-  };
-
   return (
     <>
       <div className="min-h-screen bg-gray-50 pt-20">
@@ -134,7 +129,6 @@ const Projects: React.FC = () => {
                   key={project.id}
                   {...project}
                   image={project.image_url}
-                  onContactAgent={() => handleContactAgent(project)}
                 />
               ))}
             </div>
