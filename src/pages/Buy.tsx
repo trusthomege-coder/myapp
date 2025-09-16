@@ -197,7 +197,6 @@ const Buy: React.FC = () => {
                 <PropertyCard
                   {...property}
                   image={property.image_url}
-                  onContactAgent={() => handleContactAgent(property)}
                 />
               </motion.div>
             ))}
