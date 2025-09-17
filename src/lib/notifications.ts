@@ -1,3 +1,4 @@
+// Notification service for handling form submissions
 import { supabase } from './supabase';
 
 interface ContactFormData {
@@ -19,24 +20,16 @@ interface RequestFormData {
   email: string;
   phone: string;
   preferences: string;
-}
-
-interface BookingData {
-  user_name: string;
-  user_email: string;
-  user_phone: string;
-  apartments: {
-    name: string;
-    date: string;
-    time: string;
-    language: string;
-    guests: number;
-    accompaniment: boolean;
-    amenities: boolean;
-    amenities_details: string;
-    with_children_pet: string;
-    comment: string;
-  }[];
+  priceRange: number[];
+  bookingDate: string;
+  bookingTime: string;
+  language: string;
+  guests: number;
+  accompaniment: boolean;
+  amenities: boolean;
+  amenitiesDetails: string;
+  withChildren: boolean;
+  withPets: boolean;
 }
 
 interface PropertyData {
@@ -49,6 +42,7 @@ interface PropertyData {
 // Telegram Bot Configuration
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_GROUP_CHAT_ID = import.meta.env.VITE_TELEGRAM_GROUP_CHAT_ID;
+const TELEGRAM_PERSONAL_CHAT_ID = import.meta.env.VITE_TELEGRAM_PERSONAL_CHAT_ID;
 
 // EmailJS Configuration
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
@@ -113,7 +107,7 @@ export const sendEmailNotification = async (templateParams: any, templateId: str
 };
 
 // Handle booking notification
-export const sendBookingNotification = async (bookingData: BookingData): Promise<{ success: boolean; error?: string }> => {
+export const sendBookingNotification = async (bookingData: any): Promise<{ success: boolean; error?: string }> => {
   try {
     const telegramMessage = `
 🏠 <b>Новая заявка на просмотр недвижимости</b>
@@ -148,7 +142,7 @@ ${bookingData.apartments.map((apt: any) => `
       apartments: bookingData.apartments,
       submission_time: new Date().toLocaleString('ru-RU'),
     };
-    const adminEmailSent = await sendEmailNotification(adminEmailParams, EMAILJS_ADMIN_TEMPLATE_ID!);
+    const adminEmail = await sendEmailNotification(adminEmailParams, EMAILJS_ADMIN_TEMPLATE_ID!);
 
     const userEmailParams = {
       to_email: bookingData.user_email,
@@ -156,7 +150,7 @@ ${bookingData.apartments.map((apt: any) => `
       apartments: bookingData.apartments,
       submission_time: new Date().toLocaleString('ru-RU'),
     };
-    const userEmailSent = await sendEmailNotification(userEmailParams, EMAILJS_USER_TEMPLATE_ID!);
+    const userEmail = await sendEmailNotification(userEmailParams, EMAILJS_USER_TEMPLATE_ID!);
 
     return { success: true };
   } catch (error) {
@@ -286,6 +280,17 @@ const formatRequestFormForTelegram = (data: RequestFormData): string => {
 🏠 <b>Предпочтения:</b>
 ${data.preferences}
 
+💰 <b>Ценовой диапазон:</b> $${data.priceRange[0].toLocaleString()} - $${data.priceRange[1].toLocaleString()}
+
+📅 <b>Предпочтительная дата:</b> ${data.bookingDate || 'Не указана'}
+🕐 <b>Время:</b> ${data.bookingTime}
+🌍 <b>Язык:</b> ${data.language}
+👥 <b>Количество:</b> ${data.guests} чел.
+🚗 <b>Сопровождение:</b> ${data.accompaniment ? 'Да' : 'Нет'}
+☕ <b>Удобства:</b> ${data.amenities ? data.amenitiesDetails || 'Да' : 'Нет'}
+👶 <b>Дети:</b> ${data.withChildren ? 'Да' : 'Нет'}
+🐕 <b>Питомцы:</b> ${data.withPets ? 'Да' : 'Нет'}
+
 ⏰ <b>Время:</b> ${new Date().toLocaleString('ru-RU')}
   `.trim();
 };
@@ -300,6 +305,16 @@ export const handleRequestFormSubmission = async (data: RequestFormData): Promis
         email: data.email,
         phone: data.phone,
         preferences: data.preferences,
+        price_range: data.priceRange,
+        booking_date: data.bookingDate,
+        booking_time: data.bookingTime,
+        language: data.language,
+        guests: data.guests,
+        accompaniment: data.accompaniment,
+        amenities: data.amenities,
+        amenities_details: data.amenitiesDetails,
+        with_children: data.withChildren,
+        with_pets: data.withPets,
         created_at: new Date().toISOString(),
       }]);
 
@@ -324,6 +339,50 @@ export const handleRequestFormSubmission = async (data: RequestFormData): Promis
     return { success: true };
   } catch (error) {
     console.error('Error handling request form:', error);
+    return { success: false, error: 'Произошла ошибка при отправке' };
+  }
+};
+
+// НОВАЯ ФУНКЦИЯ: для отправки заявки при нажатии на кнопку "Связаться с агентом"
+export const handleContactAgentSubmission = async (propertyData: PropertyData): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const telegramMessage = `
+📞 <b>Заявка от клиента с сайта</b>
+Запрос на контакт с агентом по объекту.
+
+🏡 <b>Объект:</b> ${propertyData.title}
+🗺️ <b>Адрес:</b> ${propertyData.location}
+💰 <b>Цена:</b> $${propertyData.price.toLocaleString()}
+🔗 <b>Ссылка:</b> ${window.location.href}
+
+⏰ <b>Время:</b> ${new Date().toLocaleString('ru-RU')}
+    `.trim();
+
+    const telegramSent = await sendTelegramNotification(telegramMessage, TELEGRAM_GROUP_CHAT_ID!);
+    
+    // Опционально: сохранение в базу данных
+    const { error: dbError } = await supabase
+      .from('agent_contact_submissions')
+      .insert([
+        {
+          property_id: propertyData.id,
+          property_title: propertyData.title,
+          property_location: propertyData.location,
+          created_at: new Date().toISOString(),
+        }
+      ]);
+    
+    if (dbError) {
+      console.error('Database error:', dbError);
+    }
+
+    if (!telegramSent) {
+      return { success: false, error: 'Не удалось отправить уведомление' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error handling contact agent submission:', error);
     return { success: false, error: 'Произошла ошибка при отправке' };
   }
 };
