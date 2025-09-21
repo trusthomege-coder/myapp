@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase';
 import { motion } from 'framer-motion';
 import PropertyCard from '../components/PropertyCard';
 import PriceRangeSlider from '../components/PriceRangeSlider';
-import { handleContactAgentSubmission } from '../lib/notifications';
 
 interface Property {
   id: number;
@@ -40,148 +39,250 @@ const Catalog: React.FC = () => {
   }, []);
 
   const fetchProperties = async () => {
-    setLoading(true);
-    let query = supabase
-      .from('properties')
-      .select('*');
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .order('id', { ascending: false });
 
-    if (filter !== 'all') {
-      query = query.eq('category', filter);
+      if (error) {
+        console.error('Error fetching properties:', error);
+        setProperties([]);
+      } else {
+        // Parse image_url JSON strings back to arrays
+        const processedData = (data || []).map(property => ({
+          ...property,
+          image_url: typeof property.image_url === 'string' && property.image_url.startsWith('[')
+            ? JSON.parse(property.image_url)
+            : property.image_url
+        }));
+        setProperties(processedData);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setProperties([]);
+    } finally {
+      setLoading(false);
     }
-
-    if (sortBy === 'newest') {
-      query = query.order('created_at', { ascending: false });
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Ошибка при загрузке объектов:', error);
-    } else {
-      const processedData = (data || []).map(property => ({
-        ...property,
-        image_url: typeof property.image_url === 'string' && property.image_url.startsWith('[')
-          ? JSON.parse(property.image_url)
-          : property.image_url
-      }));
-      setProperties(processedData as Property[]);
-    }
-    setLoading(false);
   };
 
-  const filteredProperties = properties.filter(property => {
-    const matchesSearch = property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          property.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPrice = property.price >= priceRange[0] && property.price <= priceRange[1];
-    const matchesType = propertyType === 'all' || property.type === propertyType;
-    return matchesSearch && matchesPrice && matchesType;
-  });
-  
+  const propertyTypes = [
+    { value: 'all', label: 'All Types' },
+    { value: 'apartment', label: 'Apartment' },
+    { value: 'house', label: 'House' },
+    { value: 'villa', label: 'Villa' },
+    { value: 'commercial', label: 'Commercial' },
+  ];
+
+  const sortOptions = [
+    { value: 'newest', label: 'Newest First' },
+    { value: 'price-asc', label: 'Price: Low to High' },
+    { value: 'price-desc', label: 'Price: High to Low' },
+    { value: 'area-desc', label: 'Largest First' },
+  ];
+
+  const filterProperties = () => {
+    let filtered = properties;
+
+    // Filter by category
+    if (filter !== 'all') {
+      filtered = filtered.filter(property => property.category === filter);
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(property =>
+        property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        property.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by price range
+    filtered = filtered.filter(prop => prop.price >= priceRange[0] && prop.price <= priceRange[1]);
+
+    // Filter by property type
+    if (propertyType !== 'all') {
+      filtered = filtered.filter(property => property.type === propertyType);
+    }
+
+    // Sort properties
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price-asc':
+          return a.price - b.price;
+        case 'price-desc':
+          return b.price - a.price;
+        case 'area-desc':
+          return b.area - a.area;
+        case 'newest':
+        default:
+          return b.id - a.id;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredProperties = filterProperties();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-8"
+          className="mb-8"
         >
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t('allProperties')}</h1>
-          <p className="text-lg text-gray-600">{t('exploreListings')}</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            {t('catalog')}
+          </h1>
+          <p className="text-lg text-gray-600">
+            Discover your perfect property from our extensive collection
+          </p>
         </motion.div>
 
-        {/* Filters and Search */}
+        {/* Search and Filters */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">{t('filters')}</h3>
-            <div className="flex items-center gap-2">
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by title or location..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Category Filters */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center space-x-4">
+              <Filter className="h-5 w-5 text-gray-600" />
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'all', label: 'All Properties' },
+                  { key: 'sale', label: t('forSale') },
+                  { key: 'rent', label: t('forRent') },
+                  { key: 'project', label: t('projects') },
+                ].map((filterOption) => (
+                  <button
+                    key={filterOption.key}
+                    onClick={() => setFilter(filterOption.key)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+                      filter === filterOption.key
+                        ? 'bg-blue-700 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    {filterOption.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-gray-200 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`p-2 rounded-lg ${
+                  viewMode === 'grid' ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
               >
                 <Grid className="h-5 w-5" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-gray-200 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`p-2 rounded-lg ${
+                  viewMode === 'list' ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
               >
                 <List className="h-5 w-5" />
               </button>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Filter by Category */}
+
+          {/* Advanced Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-1">
+              <PriceRangeSlider
+                min={0}
+                max={1000000}
+                value={priceRange}
+                onChange={setPriceRange}
+                step={10000}
+                collapsed={true}
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('category')}
+                Property Type
               </label>
               <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
+                value={propertyType}
+                onChange={(e) => setPropertyType(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
               >
-                <option value="all">{t('allCategories')}</option>
-                <option value="rent">{t('forRent')}</option>
-                <option value="sale">{t('forSale')}</option>
-                <option value="project">{t('projects')}</option>
+                {propertyTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
               </select>
             </div>
-            
-            {/* Search */}
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('search')}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder={t('searchPlaceholder')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
-                />
-              </div>
-            </div>
-            
-            {/* Sort by */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('sortBy')}
+                Sort By
               </label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
               >
-                <option value="newest">{t('newest')}</option>
-                <option value="price-asc">{t('priceLowToHigh')}</option>
-                <option value="price-desc">{t('priceHighToLow')}</option>
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
-          </div>
-          
-          <div className="mt-6">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">{t('priceRange')}</h4>
-            <PriceRangeSlider
-              min={0}
-              max={1000000}
-              value={priceRange}
-              onChange={setPriceRange}
-              step={10000}
-              collapsed={false}
-            />
+
+            <div className="flex items-end">
+              <div className="text-sm text-gray-600">
+                <span className="font-semibold">{filteredProperties.length}</span> properties found
+                <div className="text-xs text-gray-500 mt-1">
+                  ${priceRange[0].toLocaleString()} - ${priceRange[1].toLocaleString()}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-10 text-gray-500">Загрузка объектов...</div>
-        ) : filteredProperties.length === 0 ? (
-          <div className="text-center py-10 text-gray-500">
-            {t('noPropertiesFound')}
+        {/* Properties Grid */}
+        {filteredProperties.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <Filter className="h-12 w-12 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Properties Found</h3>
+            <p className="text-gray-600 mb-6">Try adjusting your filters or search terms.</p>
             <button
               onClick={() => {
                 setFilter('all');
